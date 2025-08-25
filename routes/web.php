@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\language\LanguageController;
 use App\Http\Controllers\pages\HomePage;
 use App\Http\Controllers\pages\Page2;
@@ -32,3 +33,39 @@ Route::get('/pages/misc-error', [MiscError::class, 'index'])->name('pages-misc-e
 // authentication
 Route::get('/auth/login-basic', [LoginBasic::class, 'index'])->name('auth-login-basic');
 Route::get('/auth/register-basic', [RegisterBasic::class, 'index'])->name('auth-register-basic');
+
+Route::middleware([
+    'auth:sanctum',
+    config('jetstream.auth_session'),
+    'verified',
+])->group(function () {
+    // Default dashboard route - it will redirect to appropriate dashboard based on user role
+    Route::get('/dashboard', function () {
+        if (Auth::user()->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+        return view('dashboard');
+    })->name('dashboard');
+
+    // Admin routes
+    Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', function () {
+            return view('admin.dashboard');
+        })->name('dashboard');
+
+        // Add more admin routes here
+        Route::get('/users', function () {
+            $users = \App\Models\User::all();
+            return view('admin.users.index', compact('users'));
+        })->name('users.index');
+    });
+
+    // User routes
+    Route::middleware(['role:user'])->prefix('user')->name('user.')->group(function () {
+        Route::get('/profile', function () {
+            return view('user.profile');
+        })->name('profile');
+
+        // Add more user routes here
+    });
+});
